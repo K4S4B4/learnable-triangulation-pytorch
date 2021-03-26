@@ -33,14 +33,14 @@ model:
 
   use_gt_pelvis: false
 
-  cuboid_side: 2500.0
+  cuboid_side: 52 ########### 48mm x 52box = 2496
 
   volume_size: 64
   volume_multiplier: 1.0
   volume_softmax: true
 
   heatmap_softmax: true
-  heatmap_multiplier: 100.0
+  heatmap_multiplier: 50.0
 
   backbone:
     name: "resnet152"

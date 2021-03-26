@@ -72,7 +72,8 @@ class Human36MMultiViewDataset(Dataset):
         n_cameras = len(self.labels['camera_names'])
         assert all(camera_idx in range(n_cameras) for camera_idx in self.ignore_cameras)
 
-        train_subjects = ['S1', 'S5', 'S6', 'S7', 'S8']
+        #train_subjects = ['S1', 'S5', 'S6', 'S7', 'S8']
+        train_subjects = ['S1', 'S5']
         test_subjects = ['S9', 'S11']
 
         train_subjects = list(self.labels['subject_names'].index(x) for x in train_subjects)
@@ -106,6 +107,9 @@ class Human36MMultiViewDataset(Dataset):
             pred_results = np.load(pred_results_path, allow_pickle=True)
             keypoints_3d_pred = pred_results['keypoints_3d'][np.argsort(pred_results['indexes'])]
             self.keypoints_3d_pred = keypoints_3d_pred[::retain_every_n_frames_in_test]
+
+            print(self.keypoints_3d_pred)
+
             assert len(self.keypoints_3d_pred) == len(self), \
                 f"[train={train}, test={test}] {labels_path} has {len(self)} samples, but '{pred_results_path}' " + \
                 f"has {len(self.keypoints_3d_pred)}. Did you follow all preprocessing instructions carefully?"

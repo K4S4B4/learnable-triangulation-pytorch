@@ -1,0 +1,18 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "python",
+      "interpreter": "(default)",
+      "interpreterArguments": "",
+      "scriptArguments": "--config experiments/human36m/eval/human36m_vol_softmax.yaml --logdir ./logs",
+      "env": {},
+      "nativeDebug": false,
+      "webBrowserUrl": "",
+      "project": "oneshot.py",
+      "projectTarget": "",
+      "name": "oneshot.py"
+    }
+  ]
+}

@@ -44,7 +44,7 @@ def integrate_tensor_2d(heatmaps, softmax=True):
     coordinates = torch.cat((x, y), dim=2)
     coordinates = coordinates.reshape((batch_size, n_heatmaps, 2))
 
-    return coordinates, heatmaps
+    return coordinates
 
 
 def integrate_tensor_3d(volumes, softmax=True):
@@ -93,55 +93,55 @@ def integrate_tensor_3d_with_coordinates(volumes, coord_volumes, softmax=True):
     volumes = volumes.reshape((batch_size, n_volumes, x_size, y_size, z_size))
     coordinates = torch.einsum("bnxyz, bxyzc -> bnc", volumes, coord_volumes)
 
-    return coordinates, volumes
+    return coordinates #, volumes
 
 
 def unproject_heatmaps(heatmaps, proj_matricies, coord_volumes, volume_aggregation_method='sum', vol_confidences=None):
     device = heatmaps.device
-    batch_size, n_views, n_joints, heatmap_shape = heatmaps.shape[0], heatmaps.shape[1], heatmaps.shape[2], tuple(heatmaps.shape[3:])
-    volume_shape = coord_volumes.shape[1:4]
+    batch_size, n_views, n_joints, heatmap_shape = heatmaps.shape[0], heatmaps.shape[1], heatmaps.shape[2], tuple(heatmaps.shape[3:]) # 1,4,32,96x96
+    volume_shape = coord_volumes.shape[1:4] #64x64x64
 
-    volume_batch = torch.zeros(batch_size, n_joints, *volume_shape, device=device)
+    volume_batch = torch.zeros(batch_size, n_joints, *volume_shape, device=device) # 1x32x64x64x64のTensor
 
     # TODO: speed up this this loop
     for batch_i in range(batch_size):
-        coord_volume = coord_volumes[batch_i]
-        grid_coord = coord_volume.reshape((-1, 3))
+        coord_volume = coord_volumes[batch_i] # Bx64x64x64x3 -> 64x64x64x3
+        grid_coord = coord_volume.reshape((-1, 3)) # 262144x3
 
-        volume_batch_to_aggregate = torch.zeros(n_views, n_joints, *volume_shape, device=device)
+        volume_batch_to_aggregate = torch.zeros(n_views, n_joints, *volume_shape, device=device) # 4x32x64x64x64
 
         for view_i in range(n_views):
-            heatmap = heatmaps[batch_i, view_i]
-            heatmap = heatmap.unsqueeze(0)
+            heatmap = heatmaps[batch_i, view_i] # 1x4x32x96x96 -> 32x96x96
+            heatmap = heatmap.unsqueeze(0) # 1x32x96x96 (一番初めに次元を追加)
 
-            grid_coord_proj = multiview.project_3d_points_to_image_plane_without_distortion(
+            grid_coord_proj = multiview.project_3d_points_to_image_plane_without_distortion( # 262144x3
                 proj_matricies[batch_i, view_i], grid_coord, convert_back_to_euclidean=False
             )
 
-            invalid_mask = grid_coord_proj[:, 2] <= 0.0  # depth must be larger than 0.0
+            invalid_mask = grid_coord_proj[:, 2] <= 0.0  # depth must be larger than 0.0 #人がカメラに近づきすぎた場合に起こる？？
 
             grid_coord_proj[grid_coord_proj[:, 2] == 0.0, 2] = 1.0  # not to divide by zero
             grid_coord_proj = multiview.homogeneous_to_euclidean(grid_coord_proj)
 
             # transform to [-1.0, 1.0] range
-            grid_coord_proj_transformed = torch.zeros_like(grid_coord_proj)
-            grid_coord_proj_transformed[:, 0] = 2 * (grid_coord_proj[:, 0] / heatmap_shape[0] - 0.5)
+            grid_coord_proj_transformed = torch.zeros_like(grid_coord_proj) # 262144x2
+            grid_coord_proj_transformed[:, 0] = 2 * (grid_coord_proj[:, 0] / heatmap_shape[0] - 0.5) # (0,0)->(96,96)の座標を、中心を(0,0)、左上を(-1,-1)、右下を(1,1)とする相対的な座標に変換
             grid_coord_proj_transformed[:, 1] = 2 * (grid_coord_proj[:, 1] / heatmap_shape[1] - 0.5)
             grid_coord_proj = grid_coord_proj_transformed
 
             # prepare to F.grid_sample
-            grid_coord_proj = grid_coord_proj.unsqueeze(1).unsqueeze(0)
+            grid_coord_proj = grid_coord_proj.unsqueeze(1).unsqueeze(0) # 引数で指定された場所に一つ次元を足すらしい 1x262144x1x2。heatmapが1x32x96x96
             try:
-                current_volume = F.grid_sample(heatmap, grid_coord_proj, align_corners=True)
+                current_volume = F.grid_sample(heatmap, grid_coord_proj, align_corners=True) # 1x32x262144x1 = Heatmap(1x32x96x96), grid_coord_proj(1x262144x1x2)
             except TypeError: # old PyTorch
                 current_volume = F.grid_sample(heatmap, grid_coord_proj)
 
             # zero out non-valid points
-            current_volume = current_volume.view(n_joints, -1)
+            current_volume = current_volume.view(n_joints, -1) #32x262144
             current_volume[:, invalid_mask] = 0.0
 
             # reshape back to volume
-            current_volume = current_volume.view(n_joints, *volume_shape)
+            current_volume = current_volume.view(n_joints, *volume_shape) #32x64x64x64
 
             # collect
             volume_batch_to_aggregate[view_i] = current_volume
@@ -154,10 +154,10 @@ def unproject_heatmaps(heatmaps, proj_matricies, coord_volumes, volume_aggregati
         elif volume_aggregation_method == 'max':
             volume_batch[batch_i] = volume_batch_to_aggregate.max(0)[0]
         elif volume_aggregation_method == 'softmax':
-            volume_batch_to_aggregate_softmin = volume_batch_to_aggregate.clone()
-            volume_batch_to_aggregate_softmin = volume_batch_to_aggregate_softmin.view(n_views, -1)
+            volume_batch_to_aggregate_softmin = volume_batch_to_aggregate.clone() # 2x32x64x64x64(n_views, n_joints, *volume_shape)
+            volume_batch_to_aggregate_softmin = volume_batch_to_aggregate_softmin.view(n_views, -1) # reshape
             volume_batch_to_aggregate_softmin = nn.functional.softmax(volume_batch_to_aggregate_softmin, dim=0)
-            volume_batch_to_aggregate_softmin = volume_batch_to_aggregate_softmin.view(n_views, n_joints, *volume_shape)
+            volume_batch_to_aggregate_softmin = volume_batch_to_aggregate_softmin.view(n_views, n_joints, *volume_shape) #reshape back
 
             volume_batch[batch_i] = (volume_batch_to_aggregate * volume_batch_to_aggregate_softmin).sum(0)
         else:

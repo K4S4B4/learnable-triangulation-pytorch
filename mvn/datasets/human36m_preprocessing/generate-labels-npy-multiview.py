@@ -12,24 +12,29 @@ import h5py
 BBOXES_SOURCE = 'GT' # or 'MRCNN' or 'SSD'
 
 retval = {
-    'subject_names': ['S1', 'S5', 'S6', 'S7', 'S8', 'S9', 'S11'],
+    #'subject_names': ['S1', 'S5', 'S6', 'S7', 'S8', 'S9', 'S11'],
+    'subject_names': ['S1', 'S5', 'S9', 'S11'],
     'camera_names': ['54138969', '55011271', '58860488', '60457274'],
+    #'action_names': [
+    #    'Directions-1', 'Directions-2',
+    #    'Discussion-1', 'Discussion-2',
+    #    'Eating-1', 'Eating-2',
+    #    'Greeting-1', 'Greeting-2',
+    #    'Phoning-1', 'Phoning-2',
+    #    'Posing-1', 'Posing-2',
+    #    'Purchases-1', 'Purchases-2',
+    #    'Sitting-1', 'Sitting-2',
+    #    'SittingDown-1', 'SittingDown-2',
+    #    'Smoking-1', 'Smoking-2',
+    #    'TakingPhoto-1', 'TakingPhoto-2',
+    #    'Waiting-1', 'Waiting-2',
+    #    'Walking-1', 'Walking-2',
+    #    'WalkingDog-1', 'WalkingDog-2',
+    #    'WalkingTogether-1', 'WalkingTogether-2']
     'action_names': [
-        'Directions-1', 'Directions-2',
-        'Discussion-1', 'Discussion-2',
-        'Eating-1', 'Eating-2',
-        'Greeting-1', 'Greeting-2',
-        'Phoning-1', 'Phoning-2',
-        'Posing-1', 'Posing-2',
-        'Purchases-1', 'Purchases-2',
-        'Sitting-1', 'Sitting-2',
-        'SittingDown-1', 'SittingDown-2',
-        'Smoking-1', 'Smoking-2',
-        'TakingPhoto-1', 'TakingPhoto-2',
-        'Waiting-1', 'Waiting-2',
-        'Walking-1', 'Walking-2',
-        'WalkingDog-1', 'WalkingDog-2',
-        'WalkingTogether-1', 'WalkingTogether-2']
+        'Posing-1',
+        'Purchases-1',
+        ]
 }
 retval['cameras'] = np.empty(
     (len(retval['subject_names']), len(retval['camera_names'])),
@@ -80,6 +85,14 @@ for subject_idx, subject in enumerate(retval['subject_names']):
         camera_retval['dist'][:2] = camera_params['k'][:2, 0]
         camera_retval['dist'][2:4] = camera_params['p'][:, 0]
         camera_retval['dist'][4] = camera_params['k'][2, 0]
+
+        #########################################################################
+        print(camera)
+        print(camera_retval['R'])
+        print(camera_retval['t'])
+        print(camera_retval['K'])
+        print(camera_retval['dist'])
+        #########################################################################
 
 # Fill bounding boxes
 bboxes = np.load(sys.argv[3], allow_pickle=True).item()
@@ -195,6 +208,13 @@ for subject_idx, subject in enumerate(retval['subject_names']):
                 continue
             
             for bbox, frame_idx in zip(table_segment['bbox_by_camera_tlbr'], frame_idxs):
+
+                #########################################################################
+                if subject == 'S9' and action == 'Posing-1' and frame_idx == 1770:
+                    print(camera)
+                    print(bboxes[subject][action][camera][frame_idx])
+                #########################################################################
+                  
                 bbox[camera_idx] = bboxes[subject][action][camera][frame_idx]
 
         retval['table'].append(table_segment)

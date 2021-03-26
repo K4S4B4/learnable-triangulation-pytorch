@@ -138,7 +138,7 @@ def triangulate_point_from_multiple_views_linear(proj_matricies, points):
     return point_3d
 
 
-def triangulate_point_from_multiple_views_linear_torch(proj_matricies, points, confidences=None):
+def triangulate_point_from_multiple_views_linear_torch(proj_matricies, points, confidences):
     """Similar as triangulate_point_from_multiple_views_linear() but for PyTorch.
     For more information see its documentation.
     Args:
@@ -149,13 +149,10 @@ def triangulate_point_from_multiple_views_linear_torch(proj_matricies, points, c
     Returns:
         point_3d numpy torch tensor of shape (3,): triangulated point
     """
-    assert len(proj_matricies) == len(points)
+    #assert len(proj_matricies) == len(points)
 
     n_views = len(proj_matricies)
-
-    if confidences is None:
-        confidences = torch.ones(n_views, dtype=torch.float32, device=points.device)
-
+        
     A = proj_matricies[:, 2:3].expand(n_views, 2, 4) * points.view(n_views, 2, 1)
     A -= proj_matricies[:, :2]
     A *= confidences.view(-1, 1, 1)

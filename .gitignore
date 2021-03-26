@@ -102,3 +102,21 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+
+weights.pth
+*.mp4
+
+detectron2/
+env1/
+logs/
+*.onnx
+onnxruntime_profile*.json
+env.zip
+data/pretrained/human36m/human36m_alg_10-04-2019/checkpoints/0060/results/train.pkl
+data/pretrained/human36m/human36m_alg_10-04-2019/checkpoints/0060/results/val.pkl
+data/pretrained/human36m/pose_resnet_4.5_pixels_human36m.pth
+script_pose2d_cpu.pt
+script_pose2d_gpu.pt
+traced_pose2d_cpu.pt
+traced_pose2d_gpu.pt

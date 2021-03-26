@@ -250,14 +250,20 @@ class VolumetricTriangulationNet(nn.Module):
         images = images.view(-1, *images.shape[2:])
 
         # forward backbone
-        heatmaps, features, _, vol_confidences = self.backbone(images)
+        heatmaps, features, _, vol_confidences = self.backbone(images) 
+        #heatmaps, features, alg_confidences, vol_confidences = self.backbone(images) # heatmaps, features, alg_confidences, vol_confidences ################################
+
+        # ALG ################################
+        keypoints_2d, _ = op.integrate_tensor_2d(heatmaps * self.heatmap_multiplier, self.heatmap_softmax)
+        keypoints_2d = keypoints_2d.view(batch_size, n_views, *keypoints_2d.shape[1:])
+        # ALG ################################
 
         # reshape back
         images = images.view(batch_size, n_views, *images.shape[1:])
         heatmaps = heatmaps.view(batch_size, n_views, *heatmaps.shape[1:])
         features = features.view(batch_size, n_views, *features.shape[1:])
 
-        if vol_confidences is not None:
+        if vol_confidences is not None: #falseやん
             vol_confidences = vol_confidences.view(batch_size, n_views, *vol_confidences.shape[1:])
 
         # calcualte shapes
@@ -265,8 +271,30 @@ class VolumetricTriangulationNet(nn.Module):
         n_joints = heatmaps.shape[2]
 
         # norm vol confidences
-        if self.volume_aggregation_method == 'conf_norm':
+        if self.volume_aggregation_method == 'conf_norm': #falseやん
             vol_confidences = vol_confidences / vol_confidences.sum(dim=1, keepdim=True)
+
+
+        # ALG ################################
+        # upscale keypoints_2d, because image shape != heatmap shape
+        keypoints_2d_transformed = torch.zeros_like(keypoints_2d)
+        keypoints_2d_transformed[:, :, :, 0] = keypoints_2d[:, :, :, 0] * (image_shape[1] / heatmap_shape[1])
+        keypoints_2d_transformed[:, :, :, 1] = keypoints_2d[:, :, :, 1] * (image_shape[0] / heatmap_shape[0])
+        keypoints_2d = keypoints_2d_transformed
+        # triangulate
+        try:
+            keypoints_3d_Alg = multiview.triangulate_batch_of_points(
+                proj_matricies, keypoints_2d,
+                #confidences_batch=alg_confidences
+            )
+        except RuntimeError as e:
+            print("Error: ", e)
+            print("confidences =", confidences_batch_pred)
+            print("proj_matricies = ", proj_matricies)
+            print("keypoints_2d_batch_pred =", keypoints_2d_batch_pred)
+            exit()
+        # ALG ################################
+
 
         # change camera intrinsics
         new_cameras = deepcopy(batch['cameras'])
@@ -280,18 +308,21 @@ class VolumetricTriangulationNet(nn.Module):
         # build coord volumes
         cuboids = []
         base_points = torch.zeros(batch_size, 3, device=device)
-        coord_volumes = torch.zeros(batch_size, self.volume_size, self.volume_size, self.volume_size, 3, device=device)
+        coord_volumes = torch.zeros(batch_size, self.volume_size, self.volume_size, self.volume_size, 3, device=device) # Bx64x64x64x3
         for batch_i in range(batch_size):
-            # if self.use_precalculated_pelvis:
-            if self.use_gt_pelvis:
-                keypoints_3d = batch['keypoints_3d'][batch_i]
-            else:
-                keypoints_3d = batch['pred_keypoints_3d'][batch_i]
+            # ALGで求めたぜ ################################
+            ## if self.use_precalculated_pelvis:
+            #if self.use_gt_pelvis:
+            #    keypoints_3d = batch['keypoints_3d'][batch_i]
+            #else:
+            #    keypoints_3d = batch['pred_keypoints_3d'][batch_i]
+            keypoints_3d = keypoints_3d_Alg[0].to('cpu').detach().numpy().copy()
 
             if self.kind == "coco":
                 base_point = (keypoints_3d[11, :3] + keypoints_3d[12, :3]) / 2
             elif self.kind == "mpii":
                 base_point = keypoints_3d[6, :3]
+                #base_point = np.array([1250, 1250, 1250])
 
             base_points[batch_i] = torch.from_numpy(base_point).to(device)
 
@@ -315,14 +346,14 @@ class VolumetricTriangulationNet(nn.Module):
             coord_volume = grid_coord.reshape(self.volume_size, self.volume_size, self.volume_size, 3)
 
             # random rotation
-            if self.training:
+            if self.training: # false
                 theta = np.random.uniform(0.0, 2 * np.pi)
             else:
                 theta = 0.0
 
             if self.kind == "coco":
                 axis = [0, 1, 0]  # y axis
-            elif self.kind == "mpii":
+            elif self.kind == "mpii": # true
                 axis = [0, 0, 1]  # z axis
 
             center = torch.from_numpy(base_point).type(torch.float).to(device)
@@ -333,7 +364,7 @@ class VolumetricTriangulationNet(nn.Module):
             coord_volume = coord_volume + center
 
             # transfer
-            if self.transfer_cmu_to_human36m:  # different world coordinates
+            if self.transfer_cmu_to_human36m:  # different world coordinates # false
                 coord_volume = coord_volume.permute(0, 2, 1, 3)
                 inv_idx = torch.arange(coord_volume.shape[1] - 1, -1, -1).long().to(device)
                 coord_volume = coord_volume.index_select(1, inv_idx)

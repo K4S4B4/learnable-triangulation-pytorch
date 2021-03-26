@@ -1,0 +1,1 @@
+C:/Users/user/OneDrive - 合同会社田口商事/ドキュメント/Visual Studio 2019/export_wrapper/resource

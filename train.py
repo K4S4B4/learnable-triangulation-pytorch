@@ -392,6 +392,7 @@ def main(args):
         device = torch.device(args.local_rank)
     else:
         device = torch.device(0)
+        device = torch.device('cpu') ######################################################
 
     # config
     config = cfg.load_config(args.config)
@@ -404,7 +405,7 @@ def main(args):
     }[config.model.name](config, device=device).to(device)
 
     if config.model.init_weights:
-        state_dict = torch.load(config.model.checkpoint)
+        state_dict = torch.load(config.model.checkpoint, map_location='cpu') ######################################################
         for key in list(state_dict.keys()):
             new_key = key.replace("module.", "")
             state_dict[new_key] = state_dict.pop(key)

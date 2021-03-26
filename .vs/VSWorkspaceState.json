@@ -1,0 +1,14 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\experiments",
+    "\\experiments\\human36m",
+    "\\experiments\\human36m\\eval",
+    "\\mvn",
+    "\\mvn\\datasets",
+    "\\mvn\\models",
+    "\\mvn\\utils"
+  ],
+  "SelectedNode": "\\created_onnx_test.py",
+  "PreviewInSolutionExplorer": false
+}

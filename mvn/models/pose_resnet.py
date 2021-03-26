@@ -301,13 +301,13 @@ class PoseResNet(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
 
-        alg_confidences = None
-        if hasattr(self, "alg_confidences"):
-            alg_confidences = self.alg_confidences(x)
+        #alg_confidences = None
+        #if hasattr(self, "alg_confidences"):
+        alg_confidences = self.alg_confidences(x)
 
-        vol_confidences = None
-        if hasattr(self, "vol_confidences"):
-            vol_confidences = self.vol_confidences(x)
+        #vol_confidences = None
+        #if hasattr(self, "vol_confidences"):
+        #    vol_confidences = self.vol_confidences(x)
 
         x = self.deconv_layers(x)
         features = x
@@ -315,7 +315,8 @@ class PoseResNet(nn.Module):
         x = self.final_layer(x)
         heatmaps = x
 
-        return heatmaps, features, alg_confidences, vol_confidences
+        #return heatmaps, features, alg_confidences#, vol_confidences
+        return heatmaps, features, alg_confidences
 
 
 def get_pose_net(config, device='cuda:0'):
