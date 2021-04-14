@@ -123,18 +123,22 @@ def main():
     ######## Algebraric trianglation ######### 
     ### baseline_pose2d_withConf_2x384x384xBGRxByte (BGR2RGB and Byte2Float included in onnx)
     ##########################################   
-    input = torch.rand(1, 384, 384, 3).byte().to(device)
+    input = torch.rand(2, 384, 384, 3).byte().to(device)
     ### Export the model
     torch.onnx.export(model,               # model being run
                       (input),                         # model input (or a tuple for multiple inputs)
-                      "baseline_pose2d_withConf_1x384x384xBGRxByte.onnx",   # where to save the model (can be a file or file-like object)
+                      "baseline_pose2d_withConf_2x384x384xBGRxByte.onnx",   # where to save the model (can be a file or file-like object)
                       export_params=True,        # store the trained parameter weights inside the model file
                       opset_version=12,          # the ONNX version to export the model to
                       do_constant_folding=True,  # whether to execute constant folding for optimization
                       input_names = ['images'],   # the model's input names # [n*384*384*3], [n*3*4]
                       output_names = ['joints2d', 'confidence'], # the model's output names # [n*17*2], [n*17]
+    #                  dynamic_axes={'images' : {0 : 'batch_size'},    # variable lenght axes これで入出力するTensorのdim=0が可変になる。それ以外の次元は固定
+    #                                'joints2d' : {0 : 'batch_size'},
+    #                                'confidence' : {0 : 'batch_size'},
+    #                                }
                       )
-    onnx_model = onnx.load("baseline_pose2d_withConf_1x384x384xBGRxByte.onnx")
+    onnx_model = onnx.load("baseline_pose2d_withConf_2x384x384xBGRxByte.onnx")
     onnx.checker.check_model(onnx_model)
 
     ##########################################

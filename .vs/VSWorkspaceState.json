@@ -9,6 +9,6 @@
     "\\mvn\\models",
     "\\mvn\\utils"
   ],
-  "SelectedNode": "\\created_onnx_test.py",
+  "SelectedNode": "\\mvn\\models\\algPose2dwithConfidence_preprocessInput.py",
   "PreviewInSolutionExplorer": false
 }

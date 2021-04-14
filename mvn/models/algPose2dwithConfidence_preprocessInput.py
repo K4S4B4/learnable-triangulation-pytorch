@@ -35,13 +35,13 @@ class AlgebraicTriangulationNetPreprocess(nn.Module):
     def forward(self, images):
         # preprocess
         #########################################
-        images[:,:,:,[2, 1, 0]]
+        images = images[:,:,:,[2, 1, 0]]
         images = images.permute(0,3,1,2).float()
         images *= 0.017353650;
         images -= 1.986020923;
         #########################################
 
         heatmaps, _, alg_confidences = self.backbone(images)
-        keypoints_2d = op.integrate_tensor_2d(heatmaps * self.heatmap_multiplier)
+        keypoints_2d = op.integrate_tensor_2d(heatmaps * self.heatmap_multiplier) / 96 * 384
 
         return keypoints_2d, alg_confidences

@@ -120,3 +120,5 @@ script_pose2d_cpu.pt
 script_pose2d_gpu.pt
 traced_pose2d_cpu.pt
 traced_pose2d_gpu.pt
+
+.vs/
